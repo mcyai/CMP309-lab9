@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMP309 Study Programme Server</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Web Programming Study Programme</h1>
+    <p>
+      This small information server belongs to a made-up study programme.
+      It teaches how a back-end works: routes, status codes, redirects,
+      middleware and static files. Use the buttons below to try every API
+      route and see the status code and body the server sends back.
+    </p>
+  </header>
+
+  <main>
+    <section>
+      <h2>Try the API</h2>
+      <div class="buttons">
+        <button type="button" data-method="GET" data-path="/api/courses">GET /api/courses</button>
+        <button type="button" data-method="GET" data-path="/api/status">GET /api/status</button>
+        <button type="button" data-method="GET" data-path="/api/headers">GET /api/headers</button>
+        <button type="button" data-method="POST" data-path="/api/subscribe">POST /api/subscribe</button>
+        <button type="button" data-method="GET" data-path="/api/admin">GET /api/admin</button>
+        <button type="button" data-method="GET" data-path="/api/stats">GET /api/stats</button>
+        <button type="button" data-method="GET" data-path="/api/does-not-exist">GET /api/does-not-exist</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Response</h2>
+      <p id="status">No request sent yet.</p>
+      <pre id="output"></pre>
+    </section>
+  </main>
+</body>
+</html>

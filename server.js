@@ -1,3 +1,4 @@
+import path from 'node:path';
 import express from 'express';
 
 const app = express();
@@ -69,6 +70,8 @@ app.post('/api/subscribe',(req, res) => {
 app.get('/api/admin', (req, res) => {
   res.status(403).json({ error: 'Forbidden' });
 });
+
+app.use(express.static(path.join(import.meta.dirname, 'public')));
 
 app.use((req, res) => {
   if (req.path === '/api' || req.path.startsWith('/api/')) {
