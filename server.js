@@ -70,6 +70,14 @@ app.get('/api/admin', (req, res) => {
   res.status(403).json({ error: 'Forbidden' });
 });
 
+app.use((req, res) => {
+  if (req.path === '/api' || req.path.startsWith('/api/')) {
+    res.status(404).json({ error: 'Not found' });
+    return;
+  }
+  res.status(404).type('text/plain').send('Page not found');
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running at http://localhost:${PORT}`);
 });
