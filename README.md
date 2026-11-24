@@ -196,3 +196,97 @@ Keep-Alive: timeout=5
 User-agent: *
 Disallow: /api/admin
 ```
+
+## Reasoning questions
+
+**1. Route order. Experiment: move the 404 fallback to the top.**
+I registered the fallback `app.use((req, res) => ...)` right after the app was
+created, before the middleware and routes. Every request then received a 404,
+including `/hello` (text 404), `/api/courses` (JSON `{"error":"Not found"}`)
+and even `/` (the page itself). Express goes through the registered handlers in
+order and the first one that sends a response ends the chain. A catch-all
+without a path matches everything, so it answered first and the real routes
+were never reached. This is why the fallback has to be the last thing
+registered.
+
+**2. Middleware. Experiment: remove `next()` from the logger.**
+I tested this with curl, not with a browser. The request to `/hello` never
+received a response: curl waited until my 4-second timeout and ended with exit
+code 28 and no HTTP status. The server printed the log line for the request
+once and nothing else, because the logger neither called `next()` nor sent a
+response, so the request was stuck inside it. A browser sends the same request,
+so I expect the tab to keep loading until it times out, but I did not check
+that in a browser. The counter and all routes behind the logger never ran for
+that request.
+
+**3. Status codes.**
+`POST /api/subscribe` creates a subscription, so 201 Created tells the client
+that something new now exists, while 200 only says "the request worked". Clients,
+tools and other developers read the status code before the body, so the code
+must carry the real meaning. A missing page is a 404 and not a 200 with an
+error message because the status line is what browsers, caches, search engines
+and `fetch` (`response.ok`) look at. A 200 would tell them the page exists and
+the error text would be treated as normal content.
+
+**4. Configuration.**
+The port is an environment setting, not part of the program. Hosting platforms
+and test setups choose a free port and pass it in `PORT`, and a hard-coded 3000
+would fail when that port is already in use or not allowed. Reading
+`process.env.PORT` with a fallback of 3000 works in both cases without changing
+the code.
+
+**5. Dependencies.**
+`node_modules` is large, can be rebuilt exactly from `package.json` and
+`package-lock.json`, and can contain files that are specific to one operating
+system. Committing it would bloat the repository and create noisy diffs. A
+teammate must run `git clone <repo-url>`, `cd` into the folder, `npm install`
+(which installs the locked versions) and then `npm start`.
+
+**6. Same origin.**
+If the page is opened directly from disk (a `file://` address), the relative URL
+`/api/courses` is resolved against the file system, not against the server, so
+the request goes to `file:///api/courses` and fails. If I wrote the full address
+`http://localhost:3000/api/courses` instead, the page would come from a different
+origin than the API and the browser would block the script from reading the
+response. This restriction is the same-origin policy. It can only be relaxed by
+the server, with CORS headers, and the `cors` package is not allowed here.
+
+## Self-study notes
+
+- **Node version and running time.** The Node documentation for the `process`
+  object lists `process.version` (a string such as `v22.20.0`) and
+  `process.uptime()` (seconds since the process started, as a number with
+  decimals). `/api/status` returns `process.version` and
+  `Math.round(process.uptime())`, so both values come from the running process.
+- **Plain-text content type.** The Express documentation for `res.send` says a
+  string body is sent as `text/html` by default. I saw this: my first `/hello`
+  answered with `Content-Type: text/html`. `res.type('text/plain')` sets the
+  type before `send`, and I use it for `/hello` and `/robots.txt`.
+- **Formatting JSON in the page.** `JSON.stringify(value, null, 2)` formats an
+  object with two-space indentation. Because the response is read as text
+  first, `app.js` runs `JSON.parse` and then `JSON.stringify(..., null, 2)`, and
+  falls back to the raw text if the body is not JSON.
+- **Path that works from any folder.** `import.meta.dirname` (available in
+  current Node versions) is the folder of the current module. I build the
+  `public/` path with `path.join(import.meta.dirname, 'public')` so it does not
+  depend on the folder the server is started from.
+- **Auto restart.** `node --watch server.js` is built into Node and replaces
+  `nodemon`.
+
+## Challenges
+
+- `/hello` first returned `text/html` because `res.send` with a string defaults
+  to HTML. I found it by reading the headers with `curl --include`, then fixed
+  it with `res.type('text/plain')`.
+- My first 404 check used `startsWith('/api')`, which also matched `/apix` and
+  answered it with JSON. I changed it to match `/api` exactly or paths that
+  start with `/api/`.
+- Express 5 no longer accepts `app.get('*', ...)`, so the fallback is a
+  path-less `app.use` registered last.
+- The fallback must come after `express.static`, otherwise the page and its
+  files would end in the 404 handler.
+- I had no browser automation, so I tested `public/app.js` against the running
+  server with a small stand-in for the DOM, and I tested the freezing logger
+  with curl instead of a browser.
+- A tooling folder that is not part of the project was staged by mistake in two
+  commits. I removed it from both commits before pushing.
